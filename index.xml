@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title></title>
+    <link>https://roberreigada.github.io/</link>
+    <description>Recent content on </description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Jun 2021 13:08:09 +0000</lastBuildDate>
+    
+	<atom:link href="https://roberreigada.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Playing with an EDR: Cylance</title>
+      <link>https://roberreigada.github.io/posts/playing_with_an_edr/</link>
+      <pubDate>Fri, 25 Jun 2021 13:08:09 +0000</pubDate>
+      
+      <guid>https://roberreigada.github.io/posts/playing_with_an_edr/</guid>
+      <description>In the last few months I got really interested in AV evasion. One of the best resources to get introduced into malware development are the following posts from 0xpat blog:
+ Malware development part 1 - basics Malware development part 2 - anti dynamic analysis &amp;amp; sandboxes Malware development part 3 - anti-debugging Malware development part 4 - anti static analysis tricks Malware development part 5 - tips &amp;amp; tricks Malware development part 6 - advanced obfuscation with LLVM and template metaprogramming Malware development part 7 - Secure Desktop keylogger Malware development part 8 - COFF injection and in-memory execution Malware development part 9 - hosting CLR and managed code injection  After learning multiple injection techniques and the mechanisms that AVs use to detect the malware I managed to bypass every of them getting an stable meterpreter session without being detected.</description>
+    </item>
+    
+    <item>
+      <title>Dumping a hooked lsass</title>
+      <link>https://roberreigada.github.io/posts/dumping_hooked_lsass/</link>
+      <pubDate>Wed, 23 Jun 2021 22:46:23 +0000</pubDate>
+      
+      <guid>https://roberreigada.github.io/posts/dumping_hooked_lsass/</guid>
+      <description>As you all may already know, EDRs place hooks in many ntdll.dll functions (usually the ones abused by malware), including NtReadVirtualMemory, which means if we try to use, for example, mimikatz to read lsass process memory we will get blocked and also detected by the EDR. Same happens if we try to use the Windows API MiniDumpWriteDump as this function will call internally the ntdll.dll hooked function NtReadVirtualMemory.
+Fortunately, all we need to do in this case is bypassing the API hooking done by the EDR.</description>
+    </item>
+    
+  </channel>
+</rss>
